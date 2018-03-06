@@ -1,71 +1,35 @@
 module Main where
 
-import System.Environment
+import Data.List(inits,nub)
+import qualified Data.ListTrie.Map as M
+import Data.Semigroup ((<>))
+import Options.Applicative
 import Text.ParserCombinators.Parsec
+import System.Environment
 
-data Trie a = EmptyLeaf
-            | Leaf a (Trie a) (Trie a)
+import XComposeChecker
 
-data Target = Output String (Maybe Keysym)
-    deriving (Show)
+newtype Options = Options { path :: String }
 
-data XCompose = Sequence [Keysym] Target
-    deriving (Show)
+options :: Options.Applicative.Parser Options
+options = Options
+        <$> strOption
+            (long "filepath" <> short 'f' <> help "Filepath of .XCompose")
 
-type Keysym = String
-
-file :: Parser [XCompose]
-file = do
-        g <- group
-        eof
-        return g
-
-group :: Parser [XCompose]
-group = line `sepEndBy` spaces <?> "group"
-
-keysym :: Parser Keysym
-keysym = many1 (alphaNum <|> oneOf "*?_-.[]~=&:;!#$%^(){}") <?> "keysym_name"
-
-key :: Parser Keysym
-key = do
-        spaces
-        k <- between (char '<') (char '>') keysym
-        spaces
-        return k
-    <?> "key"
-
-keys :: Parser [Keysym]
-keys = many1 key <?> "keys"
-
-res :: Parser Target
-res = do
-        str <- between (char '"') (char '"') (many1 $ satisfy (/= '"'))
-        spaces
-        sym <- option Nothing (fmap Just keysym)
-        spaces
-        return (Output str sym)
-
-comment :: Parser ()
-comment = do
-            char '#'
-            skipMany (satisfy (/= '\n'))
-        <?> "comment"
-
-line :: Parser XCompose
-line = do
-        k <- keys
-        spaces
-        char ':'
-        spaces
-        r <- res
-        option Nothing (fmap Just comment)
-        return (Sequence k r)
-    <?> "line"
-
+process :: Options -> IO ()
+process (Options filepath) = do
+  s <- readFile filepath
+  let m = either (const M.empty) constructTrie (parse file "" s)
+  print $ M.toList $ prefixOverlap m
+  putStr "\n\n\n"
+  let keys = filter (not . null) $ nub $ concatMap (inits . (init . fst)) (M.toList $ prefixOverlap m)
+  print keys
+  print $ map (`M.member` m) keys
 
 main :: IO ()
-main = do
-        let path = "/home/moon/Documents/XComposeChecker/example/XCompose"
-        s <- readFile path
-        print $ parse group "" s
-
+main = process =<< execParser opts
+  where
+    opts = info (options <**> helper)
+      ( fullDesc
+     <> progDesc "Filepath to .XCompose file"
+     <> header "XComposeChecker - Check your .XCompose for duplicates and overlaps" )

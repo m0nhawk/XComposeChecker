@@ -1,12 +1,20 @@
+module XComposeChecker where
+
+import Data.List(inits)
+import qualified Data.ListTrie.Map as M
+import qualified Data.Map as Map
 import Text.ParserCombinators.Parsec
 
-data Target = Output String (Maybe Keysym)
-    deriving (Show)
-
-data XCompose = Sequence [Keysym] Target
-    deriving (Show)
-
+type Event = String
 type Keysym = String
+
+data Target = Output String (Maybe Keysym)
+    deriving (Eq, Show)
+
+data XCompose = Sequence { events :: [Event], target :: [Target] }
+    deriving (Eq, Show)
+
+extract (Sequence events target) = (events, target)
 
 file :: Parser [XCompose]
 file = do
@@ -53,5 +61,20 @@ line = do
         spaces
         r <- res
         option Nothing (fmap Just comment)
-        return (Sequence k r)
+        return (Sequence k [r])
     <?> "line"
+
+constructTrie :: [XCompose] -> M.TrieMap Map.Map Event [Target]
+constructTrie list = M.fromListWith (++) (map extract list)
+
+type ResultTrie = M.TrieMap Map.Map Event [Target]
+
+mshow list = M.showTrie list ""
+
+duplicates :: ResultTrie -> String
+duplicates = mshow . M.filter (\v -> length v /= 1)
+
+prefixOverlap :: ResultTrie -> ResultTrie
+prefixOverlap m = M.filterWithKey f m
+  where
+    f k _ = or [M.member x m | x <- inits (init k)]
