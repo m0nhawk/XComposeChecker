@@ -20,11 +20,12 @@ process :: Options -> IO ()
 process (Options filepath) = do
   s <- readFile filepath
   let m = either (const M.empty) constructTrie (parse file "" s)
-  print $ M.toList $ prefixOverlap m
+  putStrLn $ mshow m
   putStr "\n\n\n"
   let keys = filter (not . null) $ nub $ concatMap (inits . (init . fst)) (M.toList $ prefixOverlap m)
-  print keys
+  -- print keys
   print $ map (`M.member` m) keys
+  putStrLn $ duplicates m
 
 main :: IO ()
 main = process =<< execParser opts
