@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                XComposeChecker
-version:             0.2.0.0
+version:             0.3.0.0
 -- synopsis:
 -- description:
 license:             MIT
@@ -15,10 +15,59 @@ build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
 
-executable XComposeChecker
-  main-is:             Main.hs
+source-repository head
+  type: git
+  location: https://github.com/m0nhawk/XComposeChecker
+
+library
+  exposed-modules:
+      XComposeChecker
+      XComposeTypes
+      XComposeParser
   -- other-modules:
-  -- other-extensions:
-  build-depends:       base >=4.8, parsec, list-tries, containers, optparse-applicative
-  -- hs-source-dirs:
-  default-language:    Haskell2010
+  --     Paths_XComposeChecker
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , parsec
+    , list-tries
+    , containers
+    , optparse-applicative
+  default-language: Haskell2010
+
+executable XComposeChecker-exe
+  main-is: Main.hs
+  -- other-modules:
+  --     Paths_XComposeChecker
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      XComposeChecker
+    , base >=4.7 && <5
+    , parsec
+    , list-tries
+    , containers
+    , optparse-applicative
+  default-language: Haskell2010
+
+test-suite XComposeChecker-test
+  type: exitcode-stdio-1.0
+  main-is: Tests.hs
+  other-modules:
+      Paths_XComposeChecker
+  hs-source-dirs:
+      tests
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      XComposeChecker
+    , base >=4.7 && <5
+    , HUnit
+    , tasty
+    , tasty-hunit
+    , parsec
+    , list-tries
+    , containers
+    , optparse-applicative
+  default-language: Haskell2010
